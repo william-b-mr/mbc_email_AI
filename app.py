@@ -46,6 +46,19 @@ response_categories = {
     ]
 }
 
+avoid = [
+    "Desculpe", 
+    "Desculpa", 
+    "culpa", 
+    "nossa culpa",
+    "erro nosso",
+    "falha nossa",
+    "não podemos",
+    "impossível",
+    "não é possível",
+    "complicado"
+]
+
 # Create tabs for better organization
 tab1, tab2 = st.tabs(["Composição do Email", "Configurações Avançadas"])
 
