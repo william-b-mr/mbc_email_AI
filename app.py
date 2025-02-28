@@ -16,55 +16,136 @@ client = OpenAI(
 # App Title
 st.title("Gerador de Respostas")
 
-# Text input for customer email
-customer_email = st.text_area("Coloca aqui o email:")
+# Create categories of responses
+response_categories = {
+    "Resolução de Problemas": [
+        "Explicar causa do problema",
+        "Oferecer substituição gratuita",
+        "Informar sobre reembolso",
+        "Pedir desculpas por atraso na entrega",
+        "Explicar política de devoluções"
+    ],
+    "Informações sobre Produtos": [
+        "Fornecer informações sobre tamanhos",
+        "Explicar materiais e cuidados",
+        "Informar sobre disponibilidade",
+        "Explicar processo de personalização",
+        "Fornecer guia de medidas"
+    ],
+    "Envios e Portes": [
+        "Explicar que portes gratis não são possíveis",
+        "Informar prazo de entrega estimado",
+        "Fornecer informação de tracking",
+        "Explicar custos de envio internacional"
+    ],
+    "Ofertas e Descontos": [
+        "Oferecer desconto compensatório",
+        "Informar sobre promoções atuais",
+        "Oferecer voucher de desconto futuro",
+        "Explicar programa de fidelidade"
+    ]
+}
 
-avoid = ["desculpe", "desculpa", "a culpa é nossa", "negativo"]
+# Create tabs for better organization
+tab1, tab2 = st.tabs(["Composição do Email", "Configurações Avançadas"])
 
-i_want_to = st.multiselect(
-    "Tipo de resposta:", 
-    ["Explicar causa do problema", "Oferecer desconto", "Explicar que portes gratis não são possíveis nesta encomenda", "Oferecer uma substituição gratuita"]   
-)
+with tab1:
+    # Text input for customer email
+    customer_email = st.text_area("📧 Email do Cliente:", height=150)
+    
+    # Multiselect for response types, organized by category
+    selected_responses = []
+    for category, options in response_categories.items():
+        st.subheader(f"🔹 {category}")
+        category_selections = st.multiselect(
+            "Selecione as opções aplicáveis:",
+            options,
+            key=category
+        )
+        selected_responses.extend(category_selections)
+    
+    # Manager notes with improved UI
+    manager_note = st.text_area("📝 Notas Adicionais (opcional):", height=100)
 
-manager_note = st.text_area("Adicione notas adicionais, caso queira")
+with tab2:
+    # Tone selection
+    tone = st.select_slider(
+        "Tom da Resposta:",
+        options=["Muito Formal", "Formal", "Neutro", "Amigável", "Casual"],
+        value="Neutro"
+    )
+    
+    # Response length
+    max_length = st.slider(
+        "Comprimento da Resposta:",
+        min_value=50,
+        max_value=500,
+        value=200,
+        step=50,
+        help="Número aproximado de palavras na resposta"
+    )
+    
+    # Additional customization
+    include_signature = st.checkbox("Incluir Assinatura da Empresa", value=True)
+    include_contact = st.checkbox("Incluir Informações de Contacto", value=True)
 
-# Generate AI response
+# Update the generate_email_response function
 def generate_email_response(email_text):
     prompt = f"""
-    Act as a polite customer service agent for a clothing company. 
-    Your task is to generate a polite, brand-consistent email reply
+    Act as a polite customer service agent for a clothing brand. 
+    Your task is to generate a polite, brand-consistent email reply in Portuguese from Portugal.
+
+    Guidelines:
+    - Tone: {tone}
+    - Maximum length: {max_length} words
+    - Include signature: {include_signature}
+    - Include contact info: {include_contact}
 
     Customer email:
     {email_text}
     
-    The reply email should convey the following message:
-    {i_want_to}
+    The reply email should address the following points:
+    {", ".join(selected_responses)}
     
-    Avoid the following list of expressions/words, without changing the intent of the message:
-    {avoid}
+    Avoid these expressions/words:
+    {", ".join(avoid)}
     
-    {f"Manager's special instruction: {manager_note}" if manager_note else ""}
+    {f"Additional instructions: {manager_note}" if manager_note else ""}
     
-    Everything must be in Portuguese from Portugal
-    
-    Be polite and consise
+    Key requirements:
+    1. Use Portuguese from Portugal
+    2. Be polite and concise
+    3. Maintain a professional tone
+    4. Focus on solutions
     """
     
     response = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": customer_email}
-    ]
+        model="gpt-4-turbo-preview",  # Updated to a more capable model
+        messages=[
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": customer_email}
+        ],
+        temperature=0.7,  # Add some creativity while maintaining professionalism
+        max_tokens=1000
     )
     
     return response.choices[0].message.content
 
-# Button to generate response
-if st.button("Generate Response"):
+# Improved response display
+if st.button("📤 Gerar Resposta", type="primary"):
     if customer_email:
-        ai_response = generate_email_response(customer_email)
-        st.subheader("Resposta sugerida:")
-        st.text_area("AI-generated email:", ai_response, height=250)
+        with st.spinner("A gerar resposta..."):
+            ai_response = generate_email_response(customer_email)
+            st.success("Resposta gerada com sucesso!")
+            st.subheader("✉️ Resposta Sugerida:")
+            st.text_area("", ai_response, height=300)
+            
+            # Add copy button
+            st.button("📋 Copiar para Área de Transferência", 
+                     on_click=lambda: st.write(ai_response))
     else:
-        st.warning("Por favor escreve um email")
+        st.warning("⚠️ Por favor insira o email do cliente")
+
+# Add helpful footer
+st.markdown("---")
+st.markdown("💡 **Dica:** Para melhores resultados, certifique-se de selecionar todas as opções relevantes para o contexto do email.")
