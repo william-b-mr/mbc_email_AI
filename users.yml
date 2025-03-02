@@ -1,0 +1,7 @@
+users:
+  admin:
+    password: "admin123"
+    name: "Administrator"
+  user1:
+    password: "kevin123"
+    name: "kevin" 
