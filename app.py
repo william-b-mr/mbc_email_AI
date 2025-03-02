@@ -2,38 +2,124 @@ import streamlit as st
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-import hmac
-import yaml
+import bcrypt
+import json
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from typing import Optional
 
 
 load_dotenv()  # Load environment variables from .env
 
+# Security configurations
+SECRET_KEY = st.secrets["JWT_SECRET_KEY"]  # Add this to your streamlit secrets
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
-
-def load_users():
-    """Load users from users.yml file"""
-    try:
-        with open('users.yml', 'r') as file:
-            return yaml.safe_load(file)
-    except FileNotFoundError:
-        # Default admin user if no file exists
-        return {
-            'users': {
-                'admin': {
-                    'password': 'admin123',  # Change this in production
-                    'name': 'Administrator'
+    
+class UserDB:
+    """Secure user database management"""
+    def __init__(self):
+        self.users_file = "secure_users.json"
+        self._load_users()
+    
+    def _load_users(self):
+        """Load users from secure storage"""
+        try:
+            if not os.path.exists(self.users_file):
+                # Create default admin if file doesn't exist
+                admin_password = st.secrets["ADMIN_PASSWORD"]  # Get from Streamlit secrets
+                hashed_password = self._hash_password(admin_password)
+                self.users = {
+                    "admin": {
+                        "hashed_password": hashed_password,
+                        "name": "Administrator",
+                        "role": "admin"
+                    }
                 }
-            }
+                self._save_users()
+            else:
+                with open(self.users_file, 'r') as f:
+                    self.users = json.load(f)
+        except Exception as e:
+            st.error(f"Error loading users: {str(e)}")
+            self.users = {}
+    
+    def _save_users(self):
+        """Save users to secure storage"""
+        try:
+            with open(self.users_file, 'w') as f:
+                json.dump(self.users, f)
+        except Exception as e:
+            st.error(f"Error saving users: {str(e)}")
+    
+    def _hash_password(self, password: str) -> str:
+        """Hash a password using bcrypt"""
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        """Verify a password against its hash"""
+        try:
+            return bcrypt.checkpw(
+                plain_password.encode(), 
+                hashed_password.encode()
+            )
+        except Exception:
+            return False
+    
+    def authenticate_user(self, username: str, password: str) -> Optional[dict]:
+        """Authenticate a user and return user data if successful"""
+        if username not in self.users:
+            return None
+        user = self.users[username]
+        if not self.verify_password(password, user["hashed_password"]):
+            return None
+        return user
+    
+    def create_user(self, username: str, password: str, name: str, role: str = "user"):
+        """Create a new user"""
+        if username in self.users:
+            raise ValueError("Username already exists")
+        
+        hashed_password = self._hash_password(password)
+        self.users[username] = {
+            "hashed_password": hashed_password,
+            "name": name,
+            "role": role
         }
+        self._save_users()
 
-def check_password(username, password):
+def create_access_token(data: dict):
+    """Create a JWT access token"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str) -> Optional[dict]:
+    """Verify a JWT token"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+# Initialize UserDB
+user_db = UserDB()
+
+def check_password(username: str, password: str) -> bool:
     """Verify username and password"""
-    users = load_users()
-    if username in users['users']:
-        if hmac.compare_digest(users['users'][username]['password'], password):
-            return True
+    user = user_db.authenticate_user(username, password)
+    if user:
+        # Create and store access token
+        access_token = create_access_token({"sub": username, "role": user["role"]})
+        st.session_state.access_token = access_token
+        st.session_state.user_role = user["role"]
+        return True
     return False
 
 def login_page():
@@ -56,6 +142,17 @@ def login_page():
             else:
                 st.error("Nome de utilizador ou palavra-passe incorretos")
 
+def verify_session():
+    """Verify if the current session is valid"""
+    if 'access_token' not in st.session_state:
+        return False
+    
+    token_data = verify_token(st.session_state.access_token)
+    if not token_data:
+        return False
+    
+    return True
+
 def main_app():
     """Main application code"""
     OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
@@ -64,9 +161,48 @@ def main_app():
         api_key=OPENAI_API_KEY
     )
 
-    # Add logout button in sidebar
+    # Add logout button and user management in sidebar
     with st.sidebar:
         st.write(f"👤 Utilizador: {st.session_state.username}")
+        
+        # Add user management section for admins
+        if st.session_state.user_role == "admin":
+            st.markdown("---")
+            st.markdown("### ⚙️ Gestão de Utilizadores")
+            
+            # Create new user form
+            with st.expander("➕ Criar Novo Utilizador"):
+                new_username = st.text_input("Nome de Utilizador", key="new_username")
+                new_password = st.text_input("Palavra-passe", type="password", key="new_password")
+                new_name = st.text_input("Nome Completo", key="new_name")
+                new_role = st.selectbox("Função", ["user", "admin"], key="new_role")
+                
+                if st.button("Criar Utilizador"):
+                    try:
+                        user_db.create_user(
+                            username=new_username,
+                            password=new_password,
+                            name=new_name,
+                            role=new_role
+                        )
+                        st.success(f"Utilizador '{new_username}' criado com sucesso!")
+                    except ValueError as e:
+                        st.error(str(e))
+                    except Exception as e:
+                        st.error(f"Erro ao criar utilizador: {str(e)}")
+            
+            # List existing users
+            with st.expander("👥 Listar Utilizadores"):
+                st.markdown("#### Utilizadores Existentes:")
+                for username, user_data in user_db.users.items():
+                    st.markdown(f"""
+                    **{username}**
+                    - Nome: {user_data['name']}
+                    - Função: {user_data['role']}
+                    ---
+                    """)
+        
+        # Logout button
         if st.button("📤 Terminar Sessão"):
             st.session_state.authenticated = False
             st.rerun()
