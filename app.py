@@ -19,6 +19,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+
+# Initialize session state for advanced settings
+if 'tone' not in st.session_state:
+    st.session_state.tone = "Neutro"
+if 'max_length' not in st.session_state:
+    st.session_state.max_length = 200
+if 'include_signature' not in st.session_state:
+    st.session_state.include_signature = True
+if 'include_contact' not in st.session_state:
+    st.session_state.include_contact = True
     
 class UserDB:
     """Secure user database management"""
@@ -279,7 +289,8 @@ def main_app():
         tone = st.select_slider(
             "Tom da Resposta:",
             options=["Muito Formal", "Formal", "Neutro", "Amigável", "Casual"],
-            value="Neutro"
+            value=st.session_state.tone,
+            key="tone"
         )
         
         # Response length
@@ -287,14 +298,23 @@ def main_app():
             "Comprimento da Resposta:",
             min_value=50,
             max_value=500,
-            value=200,
+            value=st.session_state.max_length,
             step=50,
-            help="Número aproximado de palavras na resposta"
+            help="Número aproximado de palavras na resposta",
+            key="max_length"
         )
         
         # Additional customization
-        include_signature = st.checkbox("Incluir Assinatura da Empresa", value=True)
-        include_contact = st.checkbox("Incluir Informações de Contacto", value=True)
+        include_signature = st.checkbox(
+            "Incluir Assinatura da Empresa", 
+            value=st.session_state.include_signature,
+            key="include_signature"
+        )
+        include_contact = st.checkbox(
+            "Incluir Informações de Contacto", 
+            value=st.session_state.include_contact,
+            key="include_contact"
+        )
 
     # Update the generate_email_response function
     def generate_email_response(email_text):
