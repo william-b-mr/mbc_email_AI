@@ -15,11 +15,13 @@ load_dotenv()  # Load environment variables from .env
 SECRET_KEY = st.secrets["JWT_SECRET_KEY"]  # Add this to your streamlit secrets
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+LOGIN_REQUIRED = st.secrets["LOGIN_REQUIRED"]
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
     
+
 class UserDB:
     """Secure user database management"""
     def __init__(self):
@@ -358,7 +360,11 @@ def main_app():
     st.markdown("💡 **Dica:** Para melhores resultados, certifique-se de selecionar todas as opções relevantes para o contexto do email.")
 
 # Check if the user is authenticated, if not, show the login page
-if not st.session_state.authenticated:
-    login_page()
+if LOGIN_REQUIRED == "YES":
+    if not st.session_state.authenticated:
+        login_page()
+    else:
+        main_app()
+
 else:
     main_app()
