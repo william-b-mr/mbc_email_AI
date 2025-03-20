@@ -211,7 +211,7 @@ def main_app():
                 st.rerun()
 
     # App Title
-    st.title("Gerador de Respostas")
+    st.title("Gerador de Respostas da MBC")
 
     # Create categories of responses
     response_categories = {
@@ -265,6 +265,7 @@ def main_app():
         
         # Multiselect for response types, organized by category
         selected_responses = []
+        additional_instructions = []
         for category, options in response_categories.items():
             st.subheader(f"🔹 {category}")
             category_selections = st.multiselect(
@@ -272,6 +273,7 @@ def main_app():
                 options,
                 key=category
             )
+            additional_instructions.append(st.text_area(f"📝 [Opcional] Instruções Adicionais para {category}:", height=100))
             selected_responses.extend(category_selections)
         
         # Manager notes with improved UI
@@ -319,8 +321,10 @@ def main_app():
         
         Avoid these expressions/words:
         {", ".join(avoid)}
+
+        {f"Here are some additional instructions: {', '.join(additional_instructions)}" if additional_instructions else ""}
         
-        {f"Additional instructions: {manager_note}" if manager_note else ""}
+        {f"And final manager: {manager_note}" if manager_note else ""}
         
         Key requirements:
         1. Use Portuguese from Portugal
