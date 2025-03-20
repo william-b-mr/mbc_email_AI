@@ -273,11 +273,11 @@ def main_app():
                 options,
                 key=category
             )
-            additional_instructions.append(st.text_area(f"📝 [Opcional] Instruções Adicionais para {category}:", height=100))
+            additional_instructions.append(st.text_area(f"📝 [Opcional] Instruções Adicionais para {category}:", height=50))
             selected_responses.extend(category_selections)
         
         # Manager notes with improved UI
-        manager_note = st.text_area("📝 Notas Adicionais (opcional):", height=100)
+        manager_note = st.text_area("📝 Notas Finais (opcional):", height=100)
 
     with tab2:
         # Tone selection
