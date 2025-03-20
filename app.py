@@ -163,51 +163,52 @@ def main_app():
         api_key=OPENAI_API_KEY
     )
 
-    # Add logout button and user management in sidebar
-    with st.sidebar:
-        st.write(f"👤 Utilizador: {st.session_state.username}")
-        
-        # Add user management section for admins
-        if st.session_state.user_role == "admin":
-            st.markdown("---")
-            st.markdown("### ⚙️ Gestão de Utilizadores")
+    if LOGIN_REQUIRED == "YES":
+        # Add logout button and user management in sidebar
+        with st.sidebar:
+            st.write(f"👤 Utilizador: {st.session_state.username}")
             
-            # Create new user form
-            with st.expander("➕ Criar Novo Utilizador"):
-                new_username = st.text_input("Nome de Utilizador", key="new_username")
-                new_password = st.text_input("Palavra-passe", type="password", key="new_password")
-                new_name = st.text_input("Nome Completo", key="new_name")
-                new_role = st.selectbox("Função", ["user", "admin"], key="new_role")
+            # Add user management section for admins
+            if st.session_state.user_role == "admin":
+                st.markdown("---")
+                st.markdown("### ⚙️ Gestão de Utilizadores")
                 
-                if st.button("Criar Utilizador"):
-                    try:
-                        user_db.create_user(
-                            username=new_username,
-                            password=new_password,
-                            name=new_name,
-                            role=new_role
-                        )
-                        st.success(f"Utilizador '{new_username}' criado com sucesso!")
-                    except ValueError as e:
-                        st.error(str(e))
-                    except Exception as e:
-                        st.error(f"Erro ao criar utilizador: {str(e)}")
+                # Create new user form
+                with st.expander("➕ Criar Novo Utilizador"):
+                    new_username = st.text_input("Nome de Utilizador", key="new_username")
+                    new_password = st.text_input("Palavra-passe", type="password", key="new_password")
+                    new_name = st.text_input("Nome Completo", key="new_name")
+                    new_role = st.selectbox("Função", ["user", "admin"], key="new_role")
+                    
+                    if st.button("Criar Utilizador"):
+                        try:
+                            user_db.create_user(
+                                username=new_username,
+                                password=new_password,
+                                name=new_name,
+                                role=new_role
+                            )
+                            st.success(f"Utilizador '{new_username}' criado com sucesso!")
+                        except ValueError as e:
+                            st.error(str(e))
+                        except Exception as e:
+                            st.error(f"Erro ao criar utilizador: {str(e)}")
+                
+                # List existing users
+                with st.expander("👥 Listar Utilizadores"):
+                    st.markdown("#### Utilizadores Existentes:")
+                    for username, user_data in user_db.users.items():
+                        st.markdown(f"""
+                        **{username}**
+                        - Nome: {user_data['name']}
+                        - Função: {user_data['role']}
+                        ---
+                        """)
             
-            # List existing users
-            with st.expander("👥 Listar Utilizadores"):
-                st.markdown("#### Utilizadores Existentes:")
-                for username, user_data in user_db.users.items():
-                    st.markdown(f"""
-                    **{username}**
-                    - Nome: {user_data['name']}
-                    - Função: {user_data['role']}
-                    ---
-                    """)
-        
-        # Logout button
-        if st.button("📤 Terminar Sessão"):
-            st.session_state.authenticated = False
-            st.rerun()
+            # Logout button
+            if st.button("📤 Terminar Sessão"):
+                st.session_state.authenticated = False
+                st.rerun()
 
     # App Title
     st.title("Gerador de Respostas")
