@@ -300,9 +300,29 @@ def main_app():
         # Additional customization
         include_signature = st.checkbox("Incluir Assinatura da Empresa", value=True)
         include_contact = st.checkbox("Incluir Informações de Contacto", value=True)
+    
+    def get_time_based_greeting():
+    """
+    Determine the appropriate greeting based on the current time.
+    
+    Returns:
+        str: The appropriate greeting (Bom dia, Boa tarde, or Boa noite)
+    """
+    current_hour = datetime.now().hour
+    
+    if 5 <= current_hour < 12:
+        return "Bom dia"
+    elif 12 <= current_hour < 19:
+        return "Boa tarde"
+    else:
+        return "Boa noite"
 
-    # Update the generate_email_response function
-    def generate_email_response(email_text):
+
+    def generate_email_response(email_text, max_length):
+
+        # Get time-based greeting
+        greeting = get_time_based_greeting()
+
         prompt = f"""
         Act as a polite customer service agent for a clothing brand. 
         Your task is to generate a polite, brand-consistent email reply in Portuguese from Portugal.
@@ -312,6 +332,7 @@ def main_app():
         - Maximum length: {max_length} words
         - Include signature: {include_signature}
         - Include contact info: {include_contact}
+        - Use the following greeting: {greeting}
 
         Customer email:
         {email_text}
@@ -349,10 +370,23 @@ def main_app():
     if st.button("📤 Gerar Resposta", type="primary"):
         if customer_email:
             with st.spinner("A gerar resposta..."):
-                ai_response = generate_email_response(customer_email)
-                st.success("Resposta gerada com sucesso!")
-                st.subheader("✉️ Resposta Sugerida:")
-                st.text_area("", ai_response, height=300)
+
+                short_ai_response = generate_email_response(customer_email, max_length=50)
+                detailed_ai_response = generate_email_response(customer_email, max_length=100)
+
+                st.success("Respostas gerada com sucesso!")
+
+                # Display short response
+                st.subheader("✉️ Resposta Curta (50 palavras):")
+                st.text_area("", short_ai_response, height=200)
+                st.button("📋 Copiar Resposta Curta", 
+                     on_click=lambda: st.write(short_response))
+            
+                # Display detailed response
+                st.subheader("✉️ Resposta Detalhada (100 palavras):")
+                st.text_area("", detailed_ai_response, height=300)
+                st.button("📋 Copiar Resposta Detalhada", 
+                     on_click=lambda: st.write(detailed_response))
                 
                 # Add copy button
                 st.button("📋 Copiar para Área de Transferência", 
