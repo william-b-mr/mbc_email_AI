@@ -302,20 +302,21 @@ def main_app():
         include_contact = st.checkbox("Incluir Informações de Contacto", value=True)
     
     def get_time_based_greeting():
-    """
-    Determine the appropriate greeting based on the current time.
-    
-    Returns:
-        str: The appropriate greeting (Bom dia, Boa tarde, or Boa noite)
-    """
-    current_hour = datetime.now().hour
-    
-    if 5 <= current_hour < 12:
-        return "Bom dia"
-    elif 12 <= current_hour < 19:
-        return "Boa tarde"
-    else:
-        return "Boa noite"
+        
+        """
+        Determine the appropriate greeting based on the current time.
+        
+        Returns:
+            str: The appropriate greeting (Bom dia, Boa tarde, or Boa noite)
+        """
+        current_hour = datetime.now().hour
+        
+        if 5 <= current_hour < 12:
+            return "Bom dia"
+        elif 12 <= current_hour < 19:
+            return "Boa tarde"
+        else:
+            return "Boa noite"
 
 
     def generate_email_response(email_text, max_length):
